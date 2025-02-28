@@ -2,64 +2,76 @@
 # Columbia University - CSEE 4119 Computer Networks
 # Assignment 1 - Adaptive video streaming
 #
-# server.py - the server program for taking request from the client and 
-#             send the requested file back to the client
+# server.py - the server program for taking requests from the client and 
+#             sending the requested file back to the client
 #
 
 import sys
 import socket
 import threading
 
+
 def server(server_port):
-    serverPort = server_port
-    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serverSocket.bind(("", serverPort))
-    serverSocket.listen(1)
+    """
+    The server function that listens for client requests, sends the manifest file, 
+    and transmits requested video chunks.
+
+    Arguments:
+    server_port -- The port number the server listens on.
+    """
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("", server_port))
+    server_socket.listen(1)
     print("Server ready to receive")
 
-    # 接受视频名称，并返回对应的mdp文件。
-    connectionSocket, addr = serverSocket.accept()
-    video_name = connectionSocket.recv(1024)
-    first_part_mpd = './data/'
-    third_part_mpd = '/manifest.mpd'
-    mpd_addr = first_part_mpd + video_name.decode() + third_part_mpd
+    # Accept a connection from the client
+    connection_socket, addr = server_socket.accept()
+
+    # Receive the requested video name and send the corresponding MPD file
+    video_name = connection_socket.recv(1024)
+    mpd_addr = f'./data/{video_name.decode()}/manifest.mpd'
 
     try:
         with open(mpd_addr, "r") as f:
-            mdp_file = f.read()
+            mpd_file = f.read()
     except FileNotFoundError:
-        mdp_file = "video not found"
+        mpd_file = "video not found"
 
-    connectionSocket.send(mdp_file.encode())
+    connection_socket.send(mpd_file.encode())
 
-    # 接受视频清晰度，并返回对应的m4s文件。
+    # Receive the requested bitrate and send the corresponding m4s file
     index = 0
     while True:
-        bandwidth = connectionSocket.recv(1024)
+        bandwidth = connection_socket.recv(1024)
 
-        m4s_addr = './data/' + video_name.decode() + '/chunks/' + video_name.decode() + '_' + bandwidth.decode() + '_' + str(
-            index).zfill(5) + '.m4s'
-        print("m4s_addr: " + m4s_addr)
+        m4s_addr = f'./data/{video_name.decode()}/chunks/{video_name.decode()}_' \
+                   f'{bandwidth.decode()}_{str(index).zfill(5)}.m4s'
+        print(f"m4s_addr: {m4s_addr}")
 
         try:
             with open(m4s_addr, "rb") as f:
                 m4s_file = f.read()
             for i in range(0, len(m4s_file), 2048):
-                chunk1 = m4s_file[i:i + 2048]
-                connectionSocket.send(chunk1)
-            connectionSocket.send(b"END_OF_FILE")
+                chunk = m4s_file[i:i + 2048]
+                connection_socket.send(chunk)
+            connection_socket.send(b"END_OF_FILE")
 
         except FileNotFoundError:
-            m4s_file = b"finished"
-            connectionSocket.send(m4s_file)
+            connection_socket.send(b"finished")
             break
 
-        index = index + 1
+        index += 1
 
-    # 全部完成，终止程序
-    serverSocket.close()
+    # Close the server socket after sending all chunks
+    server_socket.close()
 
 
 if __name__ == '__main__':
+    """
+    The main function that parses the command-line argument for the server port 
+    and starts the server.
+    """
+
     server_port = int(sys.argv[1])
     server(server_port)

@@ -91,8 +91,9 @@ def client(server_addr, server_port, video_name, alpha, chunks_queue):
         chunks_queue.put(save_path)
         print(save_path)
 
-        s1 = (f"{start_time - zero_time} {time_difference} {t_new} {t_current} "
-              f"{bandwidths[band_i]} bunny-{bandwidths[band_i]}-{str(index).zfill(5)}.m4s \n ")
+        s1 = (f"{start_time - zero_time:.2f} {time_difference:.2f} {t_new:.2f} {t_current:.2f} "
+            f"{bandwidths[band_i]} bunny-{bandwidths[band_i]}-{str(index).zfill(5)}.m4s\n")
+
         f_txt.write(s1)
 
         index += 1
